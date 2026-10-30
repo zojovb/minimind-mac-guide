@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>在你的 Mac 上玩 MiniMind</title>
+<style>
+:root{--ink:#2b2a27;--soft:#6b665c;--paper:#fbf8f1;--line:#e6dfcf;--hi:#fff1b8;--accent:#c4532f;--ok:#2f7d4f;--code:#23211d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.75 -apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;
+background-image:repeating-linear-gradient(transparent 0 31px,var(--line) 31px 32px)}
+main{max-width:720px;margin:0 auto;padding:28px 18px 80px}
+h1{font-size:26px;line-height:1.35;margin:8px 0 6px}
+h2{font-size:21px;margin:44px 0 10px;padding-left:10px;border-left:5px solid var(--accent)}
+h3{font-size:17px;margin:22px 0 6px}
+.sub{color:var(--soft);font-size:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:14px 0;box-shadow:0 1px 0 var(--line)}
+.q{background:var(--hi);border-radius:12px;padding:14px 16px;margin:18px 0}
+.big{font-size:30px;font-weight:700;color:var(--accent)}
+.warn{border-left:4px solid var(--accent);background:#fff6f2}
+.good{border-left:4px solid var(--ok);background:#f2fbf5}
+pre{position:relative;background:var(--code);color:#f3eee2;border-radius:10px;padding:12px 14px;overflow-x:auto;font:13px/1.6 Menlo,monospace;margin:10px 0;white-space:pre}
+pre.out{background:#efe9da;color:#3a362e}
+.copy{position:absolute;top:6px;right:6px;font-size:12px;border:0;border-radius:6px;padding:3px 8px;background:#5a554b;color:#fff}
+.step{display:flex;gap:10px;align-items:baseline}
+.num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+.road{display:grid;grid-template-columns:1fr;gap:10px}
+.road .card{margin:0}
+.tag{display:inline-block;font-size:12px;border-radius:99px;padding:0 8px;background:#eee6d3;color:var(--soft);margin-left:6px}
+.flow{overflow-x:auto}
+.flow svg{min-width:560px;display:block}
+details{background:#fff;border:1px dashed var(--line);border-radius:10px;padding:8px 14px;margin:12px 0}
+summary{cursor:pointer;font-weight:600}
+code{background:#efe9da;border-radius:4px;padding:0 4px;font:13px Menlo,monospace}
+.src{font-size:13px;color:var(--soft)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left}
+</style>
+</head>
+<body><main>
+<p class="sub">左肘 · 2026-10-30 · 步骤 A、B 的命令都在你这台 MacBook Air（M2，16GB 内存）上跑过，没跑过的地方会标出来</p>
+<h1>“2 小时训出自己的模型”，<br>放到你的 Mac 上要多久？</h1>
+
+<div class="q">
+先猜一下：作者说用一张显卡 2 小时就能训完。你的 MacBook Air 没有那种显卡，从零训一个同样的模型，要多久？
+<details><summary>看答案</summary>
+<p><span class="big">约 130 小时，5 天多</span>，这还只是第一阶段“预训练”。</p>
+<p>我在你电脑上用一小份数据（15MB）实测：训完一遍用了约 48 分钟。作者推荐的入门数据有 1.2GB，是它的 80 倍，默认还要训 2 遍。48 分钟 × 80 × 2，粗算 130 小时左右，后面的“对话训练”阶段还没算。MacBook Air 没有风扇，连续跑几天会越跑越慢。</p>
+<p>所以在 Mac 上，正确玩法是<b>先体验，再缩小规模自己训一个“婴儿模型”</b>。真想完整跑 2 小时，就租一张显卡。</p>
+</details>
+</div>
+
+<h2>先搞懂：训一个模型分几步</h2>
+<p>把模型想成一个刚出生、什么都不懂的小孩：</p>
+<div class="flow"><svg viewBox="0 0 560 150" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,sans-serif">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#c4532f"/></marker></defs>
+<rect x="5" y="20" width="160" height="80" rx="12" fill="#fff" stroke="#c4532f"/>
+<text x="85" y="50" text-anchor="middle" font-size="16" font-weight="700">① 预训练</text>
+<text x="85" y="74" text-anchor="middle" font-size="12" fill="#6b665c">读海量文章，学会说话</text>
+<rect x="200" y="20" width="160" height="80" rx="12" fill="#fff" stroke="#c4532f"/>
+<text x="280" y="50" text-anchor="middle" font-size="16" font-weight="700">② 对话训练 SFT</text>
+<text x="280" y="74" text-anchor="middle" font-size="12" fill="#6b665c">看问答范例，学会回答</text>
+<rect x="395" y="20" width="160" height="80" rx="12" fill="#fff" stroke="#999" stroke-dasharray="5 4"/>
+<text x="475" y="50" text-anchor="middle" font-size="16" font-weight="700" fill="#6b665c">③ 强化学习等</text>
+<text x="475" y="74" text-anchor="middle" font-size="12" fill="#6b665c">学会更好、更守规矩（选修）</text>
+<line x1="165" y1="60" x2="198" y2="60" stroke="#c4532f" stroke-width="2" marker-end="url(#a)"/>
+<line x1="360" y1="60" x2="393" y2="60" stroke="#c4532f" stroke-width="2" marker-end="url(#a)"/>
+<text x="280" y="135" text-anchor="middle" font-size="12" fill="#c4532f">作者说的“2 小时”只是第 ② 步，在一张 RTX 3090 显卡上</text>
+</svg></div>
+<p class="src">来源：MiniMind 项目主页（github.com/jingyaogong/minimind）原文：“2 小时”指 SFT 阶段在单张 NVIDIA 3090 上跑完 1 epoch 的实测耗时。</p>
+
+<h2>三条路，从易到难</h2>
+<div class="road">
+<div class="card good"><b>A. 和作者训好的模型聊天</b><span class="tag">约 10 分钟</span><br>不训练，只下载成品试用，先看看 6400 万参数的小模型能聊成什么样。</div>
+<div class="card good"><b>B. 在 Mac 上从零训一个婴儿模型</b><span class="tag">约 50 分钟</span><br>只用一小份数据，亲眼看着它从乱码变成“有点像话”。这一步最能学到东西。</div>
+<div class="card"><b>C. 租一张显卡，完整复现</b><span class="tag">2 小时以上 · 要花钱</span><br>想要一个真正能对话的、自己训的模型，走这条。我没实际租过，下面只写大致做法。</div>
+</div>
+
+<h2>准备：下载代码，装环境</h2>
+<p>打开“终端”App，一条一条复制粘贴，回车。每条跑完再贴下一条。</p>
+
+<div class="step"><div class="num">1</div><div>把代码下载到桌面：</div></div>
+<pre><code>cd ~/Desktop
+git clone --depth 1 https://github.com/jingyaogong/minimind
+cd minimind</code></pre>
+
+<div class="step"><div class="num">2</div><div>建一个独立的 Python 环境。你电脑自带的 Python 是 3.9，太旧了，这条命令会自动下载 3.11，不影响系统：</div></div>
+<pre><code>uv venv --python 3.11 .venv
+source .venv/bin/activate</code></pre>
+<p class="sub">运行完，命令行开头会多出 <code>(.venv)</code>。以后每次新开终端窗口，都要先 <code>cd ~/Desktop/minimind</code> 再 <code>source .venv/bin/activate</code>。</p>
+
+<div class="step"><div class="num">3</div><div>装依赖（用阿里云镜像，国内快）。约 1 分钟：</div></div>
+<pre><code>uv pip install -i https://mirrors.aliyun.com/pypi/simple torch==2.6.0 -r requirements.txt</code></pre>
+
+<div class="step"><div class="num">4</div><div>补一个坑。不做这步，训练时会报错 <code>pyarrow requires NumPy 2.0</code>：</div></div>
+<pre><code>uv pip install -i https://mirrors.aliyun.com/pypi/simple pyarrow==19.0.1</code></pre>
+<p class="sub">原因：项目锁定了旧版 numpy 1.26，但默认装上的 pyarrow 太新，两个对不上。换成旧一点的 pyarrow 就好。</p>
+
+<h2>A. 和成品模型聊天</h2>
+<div class="step"><div class="num">5</div><div>下载作者训好的模型（122MB）：</div></div>
+<pre><code>modelscope download --model gongjy/minimind-3 --local_dir ./minimind-3</code></pre>
+
+<div class="step"><div class="num">6</div><div>开聊。出现提示时输入 <code>1</code> 回车，然后就能打字提问：</div></div>
+<pre><code>python eval_llm.py --load_from ./minimind-3 --device cpu</code></pre>
+<div class="card warn"><b>一定要写 <code>--device cpu</code>。</b>我试过用 Mac 的显卡（<code>--device mps</code>），程序直接崩了，报 <code>mps.matmul ... incompatible dimensions</code>。用 CPU 反而很快，实测每秒 181 个字词。</div>
+<p>我问它“北京有什么好玩的公园”，它这样回答（节选）：</p>
+<pre class="out">1. 北京动物园：位于北京市朝阳区……
+2. 故宫博物院：位于北京市朝阳区，是一个以太洪溪为主题的文化中心……
+3. 798艺术区：位于北京市中心……</pre>
+<p>说话很流畅，内容一本正经地瞎编：故宫不在朝阳区，也不是公园。6400 万参数大约是 GPT-3 的 1/2700，能把话说顺已经是它的上限。这就是小模型的真实水平，后面你自己训出来的会更差。</p>
+<p class="sub">退出：按 Ctrl + C。</p>
+
+<h2>B. 从零训一个婴儿模型</h2>
+<div class="step"><div class="num">7</div><div>只下载入门数据的开头 30MB（整份有 1.2GB），再截取前 2 万段文字：</div></div>
+<pre><code>curl -L -r 0-31457279 "https://www.modelscope.cn/datasets/gongjy/minimind_dataset/resolve/master/pretrain_t2t_mini.jsonl" | head -n 20000 > dataset/pretrain_small.jsonl</code></pre>
+<p class="sub">每一行是一段文章。2 万行大约 15MB。我这边截取用的是一个小脚本，你用的这条 <code>head</code> 命令效果一样，但我没用它实测过。</p>
+
+<div class="step"><div class="num">8</div><div>开始训练。用 Mac 的显卡（这里 mps 能用）：</div></div>
+<pre><code>cd trainer
+python -u train_pretrain.py --device mps --dtype float32 --epochs 1 --batch_size 16 --num_workers 0 --log_interval 10 --data_path ../dataset/pretrain_small.jsonl</code></pre>
+<details><summary>这些参数是什么意思</summary>
+<table>
+<tr><td><code>--device mps</code></td><td>用 Mac 的显卡。默认是 CPU，会慢很多</td></tr>
+<tr><td><code>--dtype float32</code></td><td>默认的 bfloat16 是给 NVIDIA 显卡用的，Mac 上用 float32 稳</td></tr>
+<tr><td><code>--epochs 1</code></td><td>数据只读 1 遍（默认 2 遍）</td></tr>
+<tr><td><code>--batch_size 16</code></td><td>一次读 16 段（默认 32，Air 的内存吃不太消）</td></tr>
+<tr><td><code>--num_workers 0</code></td><td>不开额外的读数据进程，Mac 上少出问题</td></tr>
+<tr><td><code>-u</code></td><td>让进度马上显示出来，不然屏幕会好几分钟没动静</td></tr>
+</table></details>
+<p>屏幕会一行行刷进度。重点看 <b>loss</b>，它代表“猜下一个字猜错的程度”，越小越好：</p>
+<pre class="out">Epoch:[1/1](10/1250), loss: 8.4011 ... epoch_time: 30.0min
+Epoch:[1/1](50/1250), loss: 7.4694 ... epoch_time: 38.0min
+……
+Epoch:[1/1](1250/1250), loss: 5.1407 ... epoch_time: 0.0min</pre>
+<p><code>(10/1250)</code> 是进度，<code>epoch_time</code> 是预计还剩多少分钟。我这次总共用了约 48 分钟，loss 从 8.4 降到 5.1。训练时电脑会发烫，属于正常现象，这段时间别跑别的重活。</p>
+<p class="sub">中途断了也不怕：程序每 1000 步自动存一次档。在原命令后面加上 <code>--from_resume 1</code> 再运行，就会从存档处接着训。我这次中途就断过一次，是这样接上的。</p>
+
+<div class="step"><div class="num">9</div><div>训完的模型存在 <code>out/pretrain_768.pth</code>。回上一层，跟它说话：</div></div>
+<pre><code>cd ..
+python eval_llm.py --weight pretrain --device cpu</code></pre>
+<p>输入 <code>1</code>，再打一句话的开头。预训练出来的模型还不会“回答问题”，只会顺着你的话往下接。我给它开头“北京的秋天”，它接了：</p>
+<pre class="out">是人是由一个亮。天是哪里，这个鸟和天空的。好的，请给我推荐一个句子。这个句子：这首诗中，在树头了，它就来……</pre>
+<p>字认识，标点会用，甚至学会了“好的，请给我……”这种对话腔，但整句不通。只读了 15MB 文字、训了 50 分钟，就这个水平。把它和第 6 步的成品对比，差距就是“1.2GB 数据 × 2 遍 + 对话训练”带来的。</p>
+
+<h2>C. 想完整跑一遍：租显卡</h2>
+<div class="card">
+<p>作者的“3 块钱”是租一张 RTX 3090 跑 2 小时的钱。国内有按小时租显卡的网站（比如 AutoDL），大致步骤：</p>
+<ol>
+<li>注册、充值，租一台带 RTX 3090 或 4090 的机器，系统选带 PyTorch 的镜像。</li>
+<li>在网页终端里重复第 1、3 步（显卡机器上不用第 2、4 步，也不用写 <code>--device</code>）。</li>
+<li>下载完整的 <code>pretrain_t2t_mini.jsonl</code> 和 <code>sft_t2t_mini.jsonl</code> 放进 <code>dataset/</code>，依次运行 <code>train_pretrain.py</code>、<code>train_full_sft.py</code>。</li>
+<li>用完马上关机，不然一直计费。</li>
+</ol>
+<p class="sub">这一段我没实际操作过，价格和界面以网站为准。真要租的时候叫我，我陪你一步步弄。</p>
+</div>
+
+<details><summary>想再深一点：读代码从哪开始</summary>
+<p>这个项目最值钱的是代码短，能一行行读懂。推荐顺序：</p>
+<ol>
+<li><code>model/model_minimind.py</code>：模型本体，三百来行。先看 <code>Attention</code>（注意力）和 <code>FeedForward</code>。</li>
+<li><code>trainer/train_pretrain.py</code>：训练循环。核心就是“算 loss → 反向传播 → 更新参数”这几行。</li>
+<li><code>dataset/lm_dataset.py</code>：文字怎么变成数字喂给模型。</li>
+</ol>
+<p>看不懂的地方截图发我，我给你讲。</p>
+</details>
+
+<p class="src">信息来源：MiniMind GitHub 主页与代码（jingyaogong/minimind，2026-10-30 读取）；所有耗时、报错和输出都来自 2026-10-30 在你这台 MacBook Air 上的实测。</p>
+</main>
+<script>
+document.querySelectorAll('pre:not(.out)').forEach(function(pre){
+  var b=document.createElement('button');b.className='copy';b.textContent='复制';
+  b.onclick=function(){
+    var t=pre.querySelector('code').innerText;
+    var done=function(){b.textContent='已复制';setTimeout(function(){b.textContent='复制'},1500)};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){fallback(t);done()})}else{fallback(t);done()}
+  };
+  pre.appendChild(b);
+});
+function fallback(t){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a)}
+</script>
+</body></html>
